@@ -1,3 +1,5 @@
+from concurrent.futures import ThreadPoolExecutor, as_completed
+
 from fake_useragent import UserAgent
 from requests import Session
 
@@ -25,8 +27,14 @@ def handle_url(url):
 
 
 def main(urls):
-    for url in urls:
-        handle_url(url)
+    with ThreadPoolExecutor() as executor:
+        futures = []
+        
+        for url in urls:
+            futures.append(executor.submit(handle_url, url=url))
+        
+        for future in as_completed(futures):
+            future.result()
 
 
 if __name__ == "__main__":
