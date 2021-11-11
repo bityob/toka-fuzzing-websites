@@ -1,60 +1,64 @@
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from typing import List
 
+import asyncio
+import aiohttp
 import click
+# Need to update fake_useragent/utils.py file manually because of known bug
+# See: https://github.com/hellysmile/fake-useragent/pull/110/files
 from fake_useragent import UserAgent
-from requests import Session
 
 
 USER_AGENT_HEADER = "User-Agent"
 
-s = Session()
+# See https://stackoverflow.com/a/66772223
+asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 ua = UserAgent()
 
 
-def get_page(url):
-    return s.get(
+async def get_page(s, url):
+    return await s.get(
         url=url,
     )    
 
 
-def handle_url(url):
+async def handle_url(s, url):
     print(f"Handling url... {url}")
     
-    response = get_page(url)
+    response = await get_page(s, url)
 
-    print(f"Response: {response},\nUser-Agent: {response.request.headers[USER_AGENT_HEADER]}")
+    print(f"Response: {response},\nUser-Agent: {response.request_info.headers[USER_AGENT_HEADER]}")
 
 
-def run(urls, user_agent=None):
+async def run(urls, user_agent=None):
     if user_agent is None:
         user_agent = ua.random
-    
-    s.headers[USER_AGENT_HEADER] = user_agent
-    
-    with ThreadPoolExecutor() as executor:
-        futures = []
+        
+    async with aiohttp.ClientSession() as s:
+        s.headers[USER_AGENT_HEADER] = user_agent
+
+        tasks = []
         
         for url in urls:
-            futures.append(executor.submit(handle_url, url=url))
-        
-        for future in as_completed(futures):
-            future.result()
+            task = asyncio.create_task(handle_url(s=s, url=url))
+            tasks.append(task)
+
+        return await asyncio.gather(*tasks)
 
 
 @click.command()
 @click.option('--url', multiple=True, help='Urls to query', prompt='The url/s to query')
 @click.option('--user-agent', default=None, 
               help='User agent to use, if not defined will use a random one')
-def service_commmand(url, user_agent):
+def service_commmand(url: List[str], user_agent: str):
     if not url:
         raise RuntimeError("Url is not defined")
 
-    run(urls=url, user_agent=user_agent)
+    # loop = asyncio.get_event_loop()
+    # urls = [*url] * 30
+    urls = url
+    # loop.run_until_complete(run(urls=urls, user_agent=user_agent))
+    asyncio.run(run(urls=urls, user_agent=user_agent))
 
 
 if __name__ == "__main__":
-    # urls = [
-    #     "https://www.example.com",
-    #     "https://httbin.org",
-    # ]
     service_commmand()

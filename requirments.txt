@@ -1,3 +1,4 @@
 requests
 fake_useragent
-click
+asyncclick
+aiohttp
