@@ -18,7 +18,7 @@ ua = UserAgent()
 async def get_page(s, url):
     return await s.get(
         url=url,
-    )    
+    )
 
 
 async def handle_url(s, url):
@@ -29,20 +29,26 @@ async def handle_url(s, url):
     print(f"Response: {response},\nUser-Agent: {response.request_info.headers[USER_AGENT_HEADER]}")
 
 
-async def run(urls, user_agent=None):
+async def fetch_urls(urls, user_agent=None):
     if user_agent is None:
         user_agent = ua.random
-        
+
     async with aiohttp.ClientSession() as s:
         s.headers[USER_AGENT_HEADER] = user_agent
 
         tasks = []
-        
+
         for url in urls:
             task = asyncio.create_task(handle_url(s=s, url=url))
             tasks.append(task)
 
         return await asyncio.gather(*tasks)
+
+
+async def run(urls, user_agent=None):
+    while True:
+        await fetch_urls(urls, user_agent)
+        await asyncio.sleep(5)
 
 
 @click.command()
