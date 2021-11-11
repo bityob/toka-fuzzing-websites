@@ -1,24 +1,38 @@
 from fake_useragent import UserAgent
 from requests import Session
 
+
+USER_AGENT_HEADER = "User-Agent"
+
 s = Session()
 ua = UserAgent()
 
 
 def get_page(url):
-    s.headers["User-Agent"] = ua.random
+    s.headers[USER_AGENT_HEADER] = ua.random
 
     return s.get(
         url=url,
     )    
 
 
-def main():
+def handle_url(url):
+    print(f"Handling url... {url}")
     
-    response = get_page("https://www.example.com")
+    response = get_page(url)
 
-    print(response)
-    print(response.request.headers)
+    print(f"Response: {response},\nUser-Agent: {response.request.headers[USER_AGENT_HEADER]}")
+
+
+def main(urls):
+    for url in urls:
+        handle_url(url)
+
 
 if __name__ == "__main__":
-    main()
+    urls = [
+        "https://www.example.com",
+        "https://httbin.org",
+    ]
+
+    main(urls)
