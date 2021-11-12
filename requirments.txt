@@ -2,3 +2,6 @@ requests
 fake_useragent
 asyncclick
 aiohttp
+fastapi
+uvicorn[standard]
+pydantic
