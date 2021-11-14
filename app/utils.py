@@ -51,7 +51,8 @@ async def get_page(s: aiohttp.ClientSession, url: Url):
         
         response = await s.get(url=url.url, headers=hedears)
     else:
-        response = await s.get(url=url.url)
+        # Must pass the headers here explicit so we can test in the tests 
+        response = await s.get(url=url.url, headers=s.headers)
 
     urls_and_responses[url] = response
 
@@ -81,8 +82,6 @@ async def fetch_urls(task_id: str, user_agent: str = None):
             tasks.append(task)
 
         return await asyncio.gather(*tasks)
-
-
 
 
 def background_task_wrapper(func: Callable) -> Callable:

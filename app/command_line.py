@@ -1,21 +1,23 @@
 from typing import List
 
 import asyncio
-import aiohttp
-import click
+import asyncclick as click
+
 
 from app.utils import run, Url, urls_and_responses
 
 # See https://stackoverflow.com/a/66772223
 asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
-
+stop_event = None
 
 
 @click.command()
 @click.option('--url', multiple=True, help='Urls to query', prompt='The url/s to query')
 @click.option('--user-agent', default=None, 
               help='User agent to use, if not defined will use a random one')
-def service_commmand(url: List[str], user_agent: str):
+async def service_commmand(url: List[str], user_agent: str):
+    global stop_event
+
     if not url:
         raise RuntimeError("Url is not defined")
 
@@ -25,8 +27,14 @@ def service_commmand(url: List[str], user_agent: str):
         {Url(url=url): None for url in urls}
     )
     
-    asyncio.run(run(stop_event=asyncio.Event(), user_agent=user_agent))
+    if stop_event is None:
+        stop_event = asyncio.Event()
+
+    await run(stop_event=stop_event, user_agent=user_agent)
 
 
 if __name__ == "__main__":
-    service_commmand()
+    try:
+        service_commmand(_anyio_backend="asyncio", standalone_mode=False)
+    except KeyboardInterrupt:
+        print("Aborted!")

@@ -1,13 +1,13 @@
 import asyncio
 from re import U
-from typing import Set, List, Callable, Any
+from typing import Set, List, Callable, Any, Optional
 from functools import wraps
 import inspect
 import logging
 import uuid
 
 import aiohttp
-from fastapi import FastAPI, BackgroundTasks
+from fastapi import FastAPI, BackgroundTasks, Response
 from starlette.background import BackgroundTask
 
 from app.utils import USER_AGENT_HEADER, run as run_fetch_urls, Url, \
@@ -18,6 +18,13 @@ app = FastAPI()
 stop_event = None
 
 
+def safe_delete(url: Url) -> bool:
+    try:
+        del urls_and_responses[url]
+        return True
+    except KeyError:
+        return False
+
 
 @app.post("/run")
 async def run(urls: List[Url], background_tasks: BackgroundTasks):
@@ -27,7 +34,7 @@ async def run(urls: List[Url], background_tasks: BackgroundTasks):
         # Stop running tasks 
         stop_event.set()
         
-    # Set new events for next tasks
+    # Set new event for next tasks
     stop_event = asyncio.Event()
 
     # Clear all urls and add the new ones
@@ -56,30 +63,32 @@ async def run_once(url: Url):
 
 
 @app.post("/add_url")
-async def add_url(url: Url):
+async def add_url(url: Url, response: Response):
     # Must remove it first, because we want to have the updated user-agent 
     # which is not part of the id/equality of the class
-    await remove_url(url)
+    safe_delete(url)
     urls_and_responses[url] = None
     return "OK"
 
 
 @app.post("/remove_url")
-async def remove_url(url: Url):
-    try:
-        del urls_and_responses[url]
-    except KeyError:
+async def remove_url(url: Url, response: Response):
+    result = safe_delete(url)
+
+    if not result:
+        response.status_code = 404
         return "No such url"
 
     return "OK"
 
 
 @app.get("/get_last_response")
-async def get_last_response(url: Url):
+async def get_last_response(url: Url, response: Response):
     try:
         response = urls_and_responses[url]
         return await response.text()
     except KeyError:
+        response.status_code = 404
         return "No such url"
 
 
