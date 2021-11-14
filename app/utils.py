@@ -2,16 +2,16 @@ from asyncio.exceptions import CancelledError
 import inspect
 from functools import wraps
 import logging
-from typing import Dict, List, Optional, Callable, Any
+from typing import Dict, Optional, Callable, Any
 import uuid
 
 import asyncio
 import aiohttp
+
 # Need to update fake_useragent/utils.py file manually because of known bug
 # See: https://github.com/hellysmile/fake-useragent/pull/110/files
 from fake_useragent import UserAgent
 from pydantic import BaseModel
-
 
 
 USER_AGENT_HEADER = "User-Agent"
@@ -34,7 +34,6 @@ class Url(BaseModel):
         return self.url
 
 
-
 ua = UserAgent()
 urls_and_responses: Dict[Url, Optional[aiohttp.ClientResponse]] = dict()
 logger = logging.getLogger(__name__)
@@ -48,10 +47,10 @@ async def get_page(s: aiohttp.ClientSession, url: Url):
         # Copy session headers to not update the global headers value
         hedears = s.headers.copy()
         hedears[USER_AGENT_HEADER] = url.user_agent
-        
+
         response = await s.get(url=url.url, headers=hedears)
     else:
-        # Must pass the headers here explicit so we can test in the tests 
+        # Must pass the headers here explicit so we can test in the tests
         response = await s.get(url=url.url, headers=s.headers)
 
     urls_and_responses[url] = response
@@ -59,14 +58,20 @@ async def get_page(s: aiohttp.ClientSession, url: Url):
     return response
 
 
-async def handle_url(task_id: str, s: aiohttp.ClientSession, url: Url) -> aiohttp.ClientResponse:
+async def handle_url(
+    task_id: Optional[str], s: aiohttp.ClientSession, url: Url
+) -> aiohttp.ClientResponse:
     print(f"[{task_id}] Handling url... {url}")
-    
+
     response = await get_page(s, url)
 
-    print(f"[{task_id}] Response: {response.status},\nUser-Agent: {response.request_info.headers[USER_AGENT_HEADER]}")
+    print(
+        f"[{task_id}] Response: {response.status},\n"
+        f"User-Agent: {response.request_info.headers[USER_AGENT_HEADER]}"
+    )
 
     return response
+
 
 async def fetch_urls(task_id: str, user_agent: str = None):
     if user_agent is None:
@@ -78,7 +83,9 @@ async def fetch_urls(task_id: str, user_agent: str = None):
         tasks = []
 
         for url in urls_and_responses:
-            task = asyncio.create_task(handle_url(task_id=task_id, s=s, url=url))
+            task = asyncio.create_task(
+                handle_url(task_id=task_id, s=s, url=url)
+            )
             tasks.append(task)
 
         return await asyncio.gather(*tasks)
@@ -86,7 +93,8 @@ async def fetch_urls(task_id: str, user_agent: str = None):
 
 def background_task_wrapper(func: Callable) -> Callable:
     """
-    Source: https://johachi.hashnode.dev/important-gotchas-with-backgroundtasks-in-fastapi
+    Source:
+    https://johachi.hashnode.dev/important-gotchas-with-backgroundtasks-in-fastapi
     """
     task_name = func.__name__
 
@@ -96,8 +104,8 @@ def background_task_wrapper(func: Callable) -> Callable:
         kwargs["task_id"] = task_id
 
         func_args = inspect.signature(func).bind(*args, **kwargs).arguments
-        func_args_str = (
-            ", ".join("{}={!r}".format(*item) for item in func_args.items())
+        func_args_str = ", ".join(
+            "{}={!r}".format(*item) for item in func_args.items()
         )
 
         print(
@@ -108,23 +116,21 @@ def background_task_wrapper(func: Callable) -> Callable:
             await func(*args, **kwargs)
             print(f"[{task_id}] Finished {task_name} Successfully")
         except CancelledError:
+            print(f"[{task_id}] Cancelded... {task_name}")
+        except Exception as e:  # 4
             print(
-            f"[{task_id}] Cancelded... {task_name}"
-            )
-        except Exception as e: #4
-            print(
-            f"[{task_id}] Failed Permanently {task_name} with error: {e}"
+                f"[{task_id}] Failed Permanently {task_name} with error: {e}"
             )
             # 5
 
     return wrapper
 
-    
+
 @background_task_wrapper
 async def run(stop_event: asyncio.Event, task_id: str, user_agent: str = None):
     while True:
         await fetch_urls(task_id, user_agent)
-        
+
         if stop_event.is_set():
             return
 

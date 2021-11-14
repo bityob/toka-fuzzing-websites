@@ -1,9 +1,7 @@
 import asyncio
 from aiohttp.client import ClientSession
-import pytest
 
 from app.utils import get_page, Url, urls_and_responses, run
-
 
 
 async def test_get_page_without_user_agent():
@@ -34,7 +32,7 @@ async def test_run_without_user_agent():
     urls_and_responses[u] = None
 
     stop_event.set()
-    
+
     # Run task in background without waiting for it
     asyncio.create_task(run(stop_event))
 

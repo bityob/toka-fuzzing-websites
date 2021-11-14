@@ -1,17 +1,18 @@
 import asyncio
-from re import U
-from typing import Set, List, Callable, Any, Optional
-from functools import wraps
-import inspect
-import logging
-import uuid
+from typing import List
 
 import aiohttp
 from fastapi import FastAPI, BackgroundTasks, Response
-from starlette.background import BackgroundTask
 
-from app.utils import USER_AGENT_HEADER, run as run_fetch_urls, Url, \
-    urls_and_responses, handle_url, ua
+
+from app.utils import (
+    USER_AGENT_HEADER,
+    run as run_fetch_urls,
+    Url,
+    urls_and_responses,
+    handle_url,
+    ua,
+)
 
 
 app = FastAPI()
@@ -30,23 +31,21 @@ def safe_delete(url: Url) -> bool:
 async def run(urls: List[Url], background_tasks: BackgroundTasks):
     global stop_event
 
-    if stop_event:  
-        # Stop running tasks 
+    if stop_event:
+        # Stop running tasks
         stop_event.set()
-        
+
     # Set new event for next tasks
     stop_event = asyncio.Event()
 
     # Clear all urls and add the new ones
     urls_and_responses.clear()
-    
-    urls_and_responses.update(
-        {url: None for url in urls}
-    )
+
+    urls_and_responses.update({url: None for url in urls})
 
     # Add new running for received urls
     background_tasks.add_task(run_fetch_urls, stop_event)
-    
+
     return "Run urls in background"
 
 
@@ -58,13 +57,13 @@ async def run_once(url: Url):
 
         s.headers[USER_AGENT_HEADER] = url.user_agent
         response = await handle_url(task_id=None, s=s, url=url)
-    
+
     return await response.text()
 
 
 @app.post("/add_url")
 async def add_url(url: Url, response: Response):
-    # Must remove it first, because we want to have the updated user-agent 
+    # Must remove it first, because we want to have the updated user-agent
     # which is not part of the id/equality of the class
     safe_delete(url)
     urls_and_responses[url] = None
@@ -90,7 +89,3 @@ async def get_last_response(url: Url, response: Response):
     except KeyError:
         response.status_code = 404
         return "No such url"
-
-
-
-

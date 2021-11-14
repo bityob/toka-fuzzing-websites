@@ -5,7 +5,7 @@
 cd <current_repository>
 pip install -r requirments.txt
 set PYTHONPATH=.
-python app\command_line.py 
+python app\command_line.py
 ```
 ```
 C:\Code\toka-fuzzing-websites>python app\command_line.py --url https://www.example.com

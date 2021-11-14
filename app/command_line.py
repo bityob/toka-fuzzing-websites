@@ -12,9 +12,14 @@ stop_event = None
 
 
 @click.command()
-@click.option('--url', multiple=True, help='Urls to query', prompt='The url/s to query')
-@click.option('--user-agent', default=None, 
-              help='User agent to use, if not defined will use a random one')
+@click.option(
+    "--url", multiple=True, help="Urls to query", prompt="The url/s to query"
+)
+@click.option(
+    "--user-agent",
+    default=None,
+    help="User agent to use, if not defined will use a random one",
+)
 async def service_commmand(url: List[str], user_agent: str):
     global stop_event
 
@@ -23,10 +28,8 @@ async def service_commmand(url: List[str], user_agent: str):
 
     urls = url
 
-    urls_and_responses.update(
-        {Url(url=url): None for url in urls}
-    )
-    
+    urls_and_responses.update({Url(url=url): None for url in urls})
+
     if stop_event is None:
         stop_event = asyncio.Event()
 

@@ -3,7 +3,7 @@ from fastapi.testclient import TestClient
 import pytest
 
 from app.server import app
-from app.utils import Url, urls_and_responses, USER_AGENT_HEADER
+from app.utils import Url, urls_and_responses
 
 
 client = TestClient(app)
@@ -28,16 +28,21 @@ def run_around_tests():
 # region safe_delete
 def test_safe_delete_exists():
     from app.server import safe_delete
+
     u = Url(url="bla")
     urls_and_responses[u] = None
     assert safe_delete(u)
     assert len(urls_and_responses) == 0
 
+
 def test_safe_delete_missing():
     from app.server import safe_delete
+
     u = Url(url="bla")
     assert not safe_delete(u)
     assert len(urls_and_responses) == 0
+
+
 # endregion
 
 # region run
@@ -77,7 +82,10 @@ async def test_run_one_url_with_user_agent():
 
         background_response = urls_and_responses[u]
         assert await background_response.text() == response_text
-        assert background_response.request_info.headers["User-Agent"] == user_agent
+        assert (
+            background_response.request_info.headers["User-Agent"]
+            == user_agent
+        )
 
 
 async def test_run_multiple_urls():
@@ -132,6 +140,7 @@ async def test_run_urls_and_clear_old_ones():
         assert await background_response.text() == response_text
         assert background_response.request_info.headers["User-Agent"]
 
+
 # endregion
 
 # region run_once
@@ -149,6 +158,7 @@ async def test_run_once_without_user_agent():
         assert response.text == f'"{response_text}"'
         assert urls_and_responses[u].request_info.headers["User-Agent"]
 
+
 def test_run_once_with_user_agent():
     response_text = "fake2"
     user_agent_text = "fake-user-agent"
@@ -162,7 +172,12 @@ def test_run_once_with_user_agent():
         assert response.status_code == 200
         assert u in urls_and_responses
         assert response.text == f'"{response_text}"'
-        assert urls_and_responses[u].request_info.headers["User-Agent"] == user_agent_text
+        assert (
+            urls_and_responses[u].request_info.headers["User-Agent"]
+            == user_agent_text
+        )
+
+
 # endregion
 
 # region add_url
@@ -172,6 +187,7 @@ def test_add_url():
     response = client.post("/add_url", json=url)
     assert response.status_code == 200
     assert Url(url=url_link) in urls_and_responses
+
 
 def test_add_url_with_user_agent():
     url_link = example_url
@@ -183,6 +199,7 @@ def test_add_url_with_user_agent():
     assert url_object in urls_and_responses
     # Check user agent of the url key
     assert urls_and_responses.popitem()[0].user_agent == "fake"
+
 
 def test_add_url_already_exists_and_get_updated():
     url_link = example_url
@@ -196,6 +213,8 @@ def test_add_url_already_exists_and_get_updated():
     assert url_object in urls_and_responses
     # Check user agent of the url key
     assert urls_and_responses.popitem()[0].user_agent == "new-user-agent"
+
+
 # endregion
 
 # region remove_url
@@ -209,6 +228,7 @@ def test_remove_url():
     assert response.status_code == 200
     assert len(urls_and_responses) == 0
 
+
 def test_remove_url_not_exists():
     url_link = example_url
     url_object = Url(url=url_link, user_agent="old-user-agent")
@@ -217,6 +237,8 @@ def test_remove_url_not_exists():
     response = client.post("/remove_url", json=url_object.dict())
     assert response.status_code == 404
     assert len(urls_and_responses) == 0
+
+
 # endregion
 
 # region get_last_response
@@ -227,8 +249,10 @@ def test_get_last_response_exists():
     response = client.get("/get_last_response", json=u.dict())
     assert response.status_code == 200
     assert len(urls_and_responses) == 1
-    # Weird bug in fast api test client, returns the string response with quotes marks 
+    # Weird bug in fast api test client,
+    # returns the string response with quotes marks
     assert response.text == f'"{text}"'
+
 
 def test_get_last_response_missing():
     text = "bla"
@@ -236,6 +260,9 @@ def test_get_last_response_missing():
     response = client.get("/get_last_response", json=u.dict())
     assert response.status_code == 404
     assert len(urls_and_responses) == 0
-    # Weird bug in fast api test client, returns the string response with quotes marks 
+    # Weird bug in fast api test client,
+    # returns the string response with quotes marks
     assert response.text == '"No such url"'
+
+
 # endregion
